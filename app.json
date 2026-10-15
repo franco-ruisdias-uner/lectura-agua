@@ -4,7 +4,22 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
-      "@react-native-vector-icons/ionicons"
+      "@react-native-vector-icons/ionicons",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "La app necesita la galería para adjuntar una foto del medidor.",
+          "cameraPermission": "La app necesita la cámara para fotografiar el medidor.",
+          "colors": {
+            "cropToolbarColor": "#000000"
+          },
+          "dark": {
+            "colors": {
+              "cropToolbarColor": "#000000"
+            }
+          }
+        }
+      ]
     ],
     "name": "lecture-agua",
     "slug": "lecture-agua",

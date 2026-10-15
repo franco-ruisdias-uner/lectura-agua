@@ -17,7 +17,7 @@ Docs, folders, and code we write are English. Contract names stay as the API wil
 | [04-stack.md](./04-stack.md) | Expo SDK 57, packages, and what each one is for | You are installing a dependency or touching the device |
 | [05-data-and-api.md](./05-data-and-api.md) | Mocks, services, the API envelope, and conventions | You are reading or writing data |
 | [06-entities.md](./06-entities.md) | Types, fields, and JSON examples | You are creating `src/types` or a mock |
-| [07-open-questions.md](./07-open-questions.md) | Gaps and contradictions in the PRD, unresolved | The requirement is not enough to decide |
+| [07-open-questions.md](./07-open-questions.md) | Gaps and contradictions in the PRD, and the answers that closed some of them | The requirement is not enough to decide |
 | [08-backlog.md](./08-backlog.md) | Proposed work sequence | You are choosing the next change |
 
 ## Repo status

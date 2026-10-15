@@ -105,7 +105,7 @@ Requirement: [RF-10](./02-requirements.md#rf-10). The story is in [00-context.md
 
 `Corregir` returns to the number. `Confirmar` saves anyway and sets `confirmadaPorLector` to true. See [Lectura](./06-entities.md#lectura).
 
-The warning does not say which multiple or difference triggers it. [P-01](./07-open-questions.md#p-01).
+The warning fires when consumption is negative or more than 3 times the average (floor 5 m³; 20 m³ with no average). [P-01](./07-open-questions.md#p-01), [P-04](./07-open-questions.md#p-04).
 
 ## Screens the PRD names and does not draw
 

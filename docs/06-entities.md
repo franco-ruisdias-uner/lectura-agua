@@ -25,7 +25,7 @@ erDiagram
 
 `Lectura` and `Novedad` stay separate. A reading has a number and produces a bill. An incident explains why there is no number. Merging them forces every screen to ask "does this have a value or not?".
 
-How many readings or incidents one supply can have inside one route is unstated. [P-07](./07-open-questions.md#p-07).
+One supply has one current result per route. A reading beats an incident; between two readings, or two incidents, the most recent `fechaHora` wins. Nothing is deleted. [P-07](./07-open-questions.md#p-07).
 
 ## Shared types
 

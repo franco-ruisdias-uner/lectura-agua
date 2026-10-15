@@ -1,16 +1,14 @@
 import { StyleSheet, Text, View } from 'react-native'
-import { Link } from 'expo-router'
+import { router } from 'expo-router'
 
+import { Button } from '@/components/Button'
 import { colors } from '@/theme/colors'
 
 export default function RouteClosedScreen() {
   return (
     <View style={styles.screen}>
-      {/* Placeholder. Compose the view in class from src/components. */}
       <Text style={styles.title}>Ruta cerrada</Text>
-      <Link href="/" replace style={styles.link}>
-        Volver a empezar
-      </Link>
+      <Button label="Volver a empezar" onPress={() => router.replace('/')} />
     </View>
   )
 }
@@ -25,9 +23,5 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontSize: 22,
-  },
-  link: {
-    color: colors.accent,
-    fontSize: 18,
   },
 })

@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
-import { Link, useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 
+import { Button } from '@/components/Button'
 import { colors } from '@/theme/colors'
 
 export default function MeterVideoScreen() {
@@ -8,17 +9,16 @@ export default function MeterVideoScreen() {
 
   return (
     <View style={styles.screen}>
-      {/* Placeholder. Compose the view in class from src/components. */}
       <Text style={styles.title}>Cómo se lee</Text>
-      <Link
-        href={{
-          pathname: '/rutas/[id]/lectura/[suministroId]',
-          params: { id, suministroId: '89' },
-        }}
-        style={styles.link}
-      >
-        Volver a la lectura
-      </Link>
+      <Button
+        label="Volver a la lectura"
+        onPress={() =>
+          router.push({
+            pathname: '/rutas/[id]/lectura/[suministroId]',
+            params: { id, suministroId: '89' },
+          })
+        }
+      />
     </View>
   )
 }
@@ -33,9 +33,5 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontSize: 22,
-  },
-  link: {
-    color: colors.accent,
-    fontSize: 18,
   },
 })

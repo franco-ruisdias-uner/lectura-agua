@@ -1,5 +1,4 @@
 import React, { useState, createContext, useMemo } from "react";
-import { useColorScheme } from "react-native";
 import { Palette, palettes } from "@/theme/colors";
 type ColorScheme = 'dark' | 'light';
 
@@ -19,8 +18,7 @@ type ThemeProviderProps = {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-    const temaSistema = useColorScheme();
-    const [tema, setTema] = useState<ColorScheme>(temaSistema === 'dark' ? 'dark' : 'light');
+    const [tema, setTema] = useState<ColorScheme>('dark');
 
     const values = useMemo(() => {
         return {

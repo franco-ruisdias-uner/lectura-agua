@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text } from 'react-native'
+import { StyleSheet, Text, TouchableOpacity } from 'react-native'
 
 import { colors } from '@/theme/colors'
 
@@ -12,15 +12,16 @@ export function Button({ label, onPress, variant = 'primary' }: ButtonProps) {
   const primary = variant === 'primary'
 
   return (
-    <Pressable
+    <TouchableOpacity
       accessibilityRole="button"
+      activeOpacity={0.7}
       onPress={onPress}
       style={[styles.base, primary ? styles.primary : styles.secondary]}
     >
       <Text style={[styles.label, primary ? styles.primaryLabel : styles.secondaryLabel]}>
         {label}
       </Text>
-    </Pressable>
+    </TouchableOpacity>
   )
 }
 

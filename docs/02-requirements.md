@@ -20,7 +20,7 @@ A route is 120 to 200 supplies in the same area, in the order they are walked. E
 | <a id="rf-02"></a>RF-02 | Open a route and list the supplies in walk order, with the address and the member's name. |
 | <a id="rf-03"></a>RF-03 | Make read, pending, and incident visible at a glance. |
 | <a id="rf-04"></a>RF-04 | Download the full route before leaving, on the cooperative's wifi. |
-| <a id="rf-05"></a>RF-05 | Close the route at the end of the day. |
+| <a id="rf-05"></a>RF-05 | Close the route at the end of the day, even with supplies still pending. [P-08](./07-open-questions.md#p-08) |
 | <a id="rf-06"></a>RF-06 | Keep `suministroIds` as the walk order. Do not reorder. |
 
 ## 2. Taking the reading
@@ -34,7 +34,7 @@ Four meter models coexist: two dial meters, one digital, and an old one with a �
 | <a id="rf-07"></a>RF-07 | On opening a supply, show the previous reading and consumption over recent periods. The wireframe shows one average of 6 periods, not a series. [P-02](./07-open-questions.md#p-02) |
 | <a id="rf-08"></a>RF-08 | Let the reader enter the number on the meter. |
 | <a id="rf-09"></a>RF-09 | Require a photo of the meter before saving the reading. It is the only way to settle a complaint six months later. |
-| <a id="rf-10"></a>RF-10 | Compute consumption and warn on the spot if it is far outside what is usual for that member. Do not block the save: warn and ask for confirmation. The threshold is undefined. [P-01](./07-open-questions.md#p-01) |
+| <a id="rf-10"></a>RF-10 | Compute consumption and warn on the spot if it is far outside what is usual for that member. Do not block the save: warn and ask for confirmation. Out of range means negative, or more than 3 times the average (floor 5 m³; 20 m³ with no average). [P-01](./07-open-questions.md#p-01), [P-04](./07-open-questions.md#p-04) |
 | <a id="rf-11"></a>RF-11 | Allow scanning the QR stuck on the meter to confirm this reading belongs to this supply. The PRD does not say the QR is required. [P-06](./07-open-questions.md#p-06) |
 | <a id="rf-12"></a>RF-12 | Move to the next supply without returning to the list. |
 | <a id="rf-13"></a>RF-13 | Play, from that same screen, the twenty-second video that shows how to read that model. |
@@ -45,7 +45,7 @@ This happens every day, and today it is recorded nowhere.
 
 | Id | The app has to |
 | --- | --- |
-| <a id="rf-14"></a>RF-14 | Mark the supply with an incident instead of a reading. |
+| <a id="rf-14"></a>RF-14 | Mark the supply with an incident instead of a reading. If it is read later, the reading wins. [P-07](./07-open-questions.md#p-07) |
 | <a id="rf-15"></a>RF-15 | Pick the reason from this short list: loose dog, closed gate, tall grass, covered meter, broken meter, unoccupied home, meter not found. |
 | <a id="rf-16"></a>RF-16 | Require a photo on the incident too. If the reason is tall grass, the photo has to show the grass. |
 | <a id="rf-17"></a>RF-17 | Allow a written note or a voice note. The reader's hands are dirty and they are in a hurry. |
@@ -62,7 +62,7 @@ The quintas have no signal, and it drops in several neighborhoods. No signal is 
 | <a id="rf-19"></a>RF-19 | Once the route is downloaded, run the whole day offline: see the list, enter readings, take photos, mark incidents. |
 | <a id="rf-20"></a>RF-20 | Store readings on the phone and upload them on their own when the signal returns, without the reader pressing anything. |
 | <a id="rf-21"></a>RF-21 | Always show how many readings are still waiting to upload. |
-| <a id="rf-22"></a>RF-22 | When closing the route, say clearly if something is still unsent, and do not allow a close that pretends everything is fine. |
+| <a id="rf-22"></a>RF-22 | When closing the route, say clearly if something is still unsent, and do not allow the close until it is sent. [P-09](./07-open-questions.md#p-09) |
 | <a id="rf-23"></a>RF-23 | Never lose a saved reading, even if the phone powers off, the app is closed, or the battery dies. If that happens once, the readers go back to the folder. |
 
 ## 5. Finding the meter

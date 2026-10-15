@@ -70,7 +70,7 @@ On `Medidor`: real consumption is `(lectura - anterior) * multiplicador`.
 
 On `Lectura`: `consumo` is `(valor - anterior) * multiplicador`. `valor` is the number as seen on the meter.
 
-That formula does not say what to do when `anterior` is `null`, or when the result is negative. Those cases are mocked and left unresolved. [P-03](./07-open-questions.md#p-03), [P-04](./07-open-questions.md#p-04).
+With no previous reading (`anterior` is `null`), the meter is taken to start at zero: `consumo = valor * multiplicador` ([P-03](./07-open-questions.md#p-03)). A negative result is saved as is, with `fueraDeRango: true`, after the warning ([P-04](./07-open-questions.md#p-04)).
 
 ## What does not travel to the phone
 

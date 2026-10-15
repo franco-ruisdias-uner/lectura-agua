@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 import { colors } from '@/theme/colors'
 
@@ -6,20 +6,24 @@ export type RouteCardProps = {
   title: string
   detail: string
   status: string
-  actionLabel: string
   onPress: () => void
 }
 
-export function RouteCard({ title, detail, status, actionLabel, onPress }: RouteCardProps) {
+export function RouteCard({ title, detail, status, onPress }: RouteCardProps) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.card}>
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      activeOpacity={0.7}
+      onPress={onPress}
+      style={styles.card}
+    >
       <View style={styles.heading}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.status}>{status}</Text>
       </View>
       <Text style={styles.detail}>{detail}</Text>
-      <Text style={styles.action}>{actionLabel}</Text>
-    </Pressable>
+    </TouchableOpacity>
   )
 }
 
@@ -50,9 +54,5 @@ const styles = StyleSheet.create({
   detail: {
     color: colors.muted,
     fontSize: 16,
-  },
-  action: {
-    color: colors.accent,
-    fontSize: 18,
   },
 })

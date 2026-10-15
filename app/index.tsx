@@ -1,14 +1,17 @@
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useState } from 'react'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { router } from 'expo-router'
 import { Controller, useForm } from 'react-hook-form'
+import Ionicons from '@react-native-vector-icons/ionicons'
 import { z } from 'zod'
 
+import { Button } from '@/components/Button'
+import { LoadingOverlay } from '@/components/LoadingOverlay'
+import { TextField } from '@/components/TextField'
+import { ThemedView } from '@/components/ThemedView'
+import { demoSignIn, signIn } from '@/services/login'
 import { colors } from '@/theme/colors'
-import { useTheme } from '@/hooks/use-theme'
-import { useContext } from 'react';
-import { ThemeContext } from '@/providers/ThemeProvider';
-import { ThemedView } from '@/components/ThemedView';
 
 // P-13: the field is legajo, as in the prototype. The username contract stays open.
 const loginSchema = z.object({
@@ -19,9 +22,9 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>
 
 export default function SignInScreen() {
-
-  const { paleta, setTema, tema } = useTheme();
-
+  const [authError, setAuthError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const demo = demoSignIn()
 
   const {
     control,
@@ -32,58 +35,73 @@ export default function SignInScreen() {
     defaultValues: { legajo: '', password: '' },
   })
 
-  const signIn = () => {
+  const onSignIn = async (values: LoginForm) => {
+    setAuthError(null)
+    setLoading(true)
 
-    router.replace('/rutas')
-
+    try {
+      await signIn(values.legajo, values.password)
+      router.replace('/rutas')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo ingresar'
+      setAuthError(message)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const cambiarTema = () => {
-    setTema(tema === 'dark' ? 'light' : 'dark');
+  const onFingerprint = () => {
+    // P-14: fingerprint sign-in is left for class. This only reports that it is missing.
+    setAuthError('El ingreso con huella todavía no está disponible')
   }
 
   return (
     <ThemedView style={styles.screen}>
-      <Text style={styles.label}>Legajo</Text>
       <Controller
         control={control}
         name="legajo"
         render={({ field: { value, onChange, onBlur } }) => (
-          <TextInput
-            value={value}
-            onChangeText={onChange}
-            onBlur={onBlur}
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={styles.input}
-          />
+          <TextField label="Legajo" value={value} onChangeText={onChange} onBlur={onBlur} />
         )}
       />
       {errors.legajo ? <Text style={styles.error}>{errors.legajo.message}</Text> : null}
 
-      <Text style={styles.label}>Contraseña</Text>
       <Controller
         control={control}
         name="password"
         render={({ field: { value, onChange, onBlur } }) => (
-          <TextInput
+          <TextField
+            label="Contraseña"
             value={value}
             onChangeText={onChange}
             onBlur={onBlur}
-            secureTextEntry
-            style={styles.input}
+            secure
           />
         )}
       />
       {errors.password ? <Text style={styles.error}>{errors.password.message}</Text> : null}
+      {demo ? (
+        <Text style={styles.hint}>
+          Probá con el legajo {demo.legajo} y la contraseña {demo.password}
+        </Text>
+      ) : null}
 
-      <Pressable accessibilityRole="button" onPress={handleSubmit(signIn)} style={styles.primary}>
-        <Text style={styles.primaryLabel}>Ingresar</Text>
-      </Pressable>
+      {authError ? <Text style={styles.error}>{authError}</Text> : null}
 
-      {/* Does not read a fingerprint. Sign-in rules stay at P-13 and P-14. */}
-      <Pressable accessibilityRole="button" onPress={cambiarTema} style={styles.secondary}>
-        <Text style={styles.secondaryLabel}>Entrar con huella</Text>
+      <Button label="Ingresar" onPress={handleSubmit(onSignIn)} />
+      <LoadingOverlay visible={loading} label="Ingresando" />
+
+      {/* P-14: does not read a fingerprint. */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Entrar con huella"
+        onPress={onFingerprint}
+        style={styles.biometric}
+      >
+        <View style={styles.biometricIcon}>
+          <Ionicons name="finger-print-outline" size={24} color={colors.accent} />
+        </View>
+        <Text style={styles.biometricTitle}>Entrar con huella</Text>
       </Pressable>
     </ThemedView>
   )
@@ -95,47 +113,29 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
   },
-  label: {
-    color: colors.text,
-    fontSize: 16,
-    marginTop: 8,
-  },
-  input: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    color: colors.text,
-    backgroundColor: colors.surface,
-    fontSize: 18,
-  },
   error: {
     color: colors.accentMuted,
     fontSize: 14,
   },
-  primary: {
-    minHeight: 48,
-    marginTop: 16,
-    borderRadius: 8,
+  hint: {
+    color: colors.muted,
+    fontSize: 16,
+  },
+  biometric: {
+    marginTop: 8,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.accent,
+    gap: 12,
   },
-  primaryLabel: {
-    color: colors.onAccent,
-    fontSize: 18,
-  },
-  secondary: {
-    minHeight: 48,
-    borderRadius: 8,
+  biometricIcon: {
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  secondaryLabel: {
+  biometricTitle: {
     color: colors.text,
-    fontSize: 18,
+    fontSize: 16,
   },
 })

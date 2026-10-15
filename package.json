@@ -13,6 +13,7 @@
     "@hookform/resolvers": "^5.9.1",
     "@react-native-vector-icons/ionicons": "^13.1.4",
     "expo": "^57.0.1",
+    "expo-image-picker": "~57.0.20",
     "expo-router": "~57.0.2",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",

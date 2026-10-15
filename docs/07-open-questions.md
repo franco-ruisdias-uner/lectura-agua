@@ -8,7 +8,7 @@ source: PRD.pdf, explicit gaps and contradictions
 
 [Index](./README.md) · previous: [06-entities.md](./06-entities.md) · next: [08-backlog.md](./08-backlog.md)
 
-Hugo asked for gaps to be reported, not resolved in silence. Every item here is open, except [P-28](#p-28), which already has a decision. Implementing an answer for the rest changes the request.
+Hugo asked for gaps to be reported, not resolved in silence. Every item here is open, except [P-01](#p-01), [P-03](#p-03), [P-04](#p-04), [P-07](#p-07), [P-08](#p-08), [P-09](#p-09), [P-25](#p-25), and [P-28](#p-28), which already have a decision. Implementing an answer for the rest changes the request.
 
 When a question is closed, write the decision under the item and update the requirement that cites it. Until then the code does not choose.
 
@@ -18,6 +18,19 @@ When a question is closed, write the decision under the item and update the requ
 Blocks [RF-10](./02-requirements.md#rf-10).
 
 The PRD asks for a warning when consumption is far outside the usual, without blocking the save. The wireframe compares 3,236 m³ with an average of 18 m³. It does not say whether the warning fires on a multiple, a fixed difference, or some other rule. It also does not say what happens when `consumoPromedio` is `null`.
+
+**Closed on 2026-10-10. Hugo's answer:** warn when consumption is negative, or when it is more than 3 times the reference. The reference is `consumoPromedio`, with a floor of 5 m³, so a home that uses almost nothing does not trigger on every small change. With no average (`null`), the reference is 20 m³. The warning never blocks the save: `Corregir` or `Confirmar`, as in the wireframe. The API computes `fueraDeRango` with the same rule.
+
+| Case | Result |
+| --- | --- |
+| 4520 entered against a previous 1284, average 18 (the PRD case): 3,236 m³ | Out of range |
+| 18 against an average of 18 | Normal |
+| 54 against an average of 18 (exactly 3 times) | Normal |
+| 55 against an average of 18 | Out of range |
+| 16 against an average of 0 (floor 5, limit 15) | Out of range |
+| 60 with no average | Normal |
+| 61 with no average | Out of range |
+| Negative | Out of range |
 
 <a id="p-02"></a>
 ## P-02 — A history of periods, or a single average
@@ -31,10 +44,14 @@ The text asks to see "consumption over recent periods". The wireframe and `Sumin
 
 `lecturaAnterior` may be `null`. The formula `(valor - anterior) * multiplicador` does not say what to do then. A new-connection mock is required ([DT-05](./05-data-and-api.md#dt-05)). A screen for that case is not.
 
+**Closed on 2026-10-10. Hugo's answer:** a new meter starts at zero, so `consumo = valor * multiplicador`. There is no average, so the warning uses the 20 m³ reference from [P-01](#p-01): if the meter was not really new, the number comes out large and the reader is warned. The reading screen is the same one; there is no special screen.
+
 <a id="p-04"></a>
 ## P-04 — Negative consumption after a meter change
 
 The mock has to include a reading with negative consumption because the meter was replaced. There is no UI rule: whether to warn, whether to allow the save, whether `fueraDeRango` applies.
+
+**Closed on 2026-10-10, with [P-01](#p-01).** A negative consumption warns, like any out-of-range value. The reader can confirm and save it. It is stored as negative, with `fueraDeRango: true`. Administration sorts out the meter change; the app does not.
 
 <a id="p-05"></a>
 ## P-05 — Which model carries the ×10 multiplier
@@ -51,15 +68,21 @@ The photo is required ([RF-09](./02-requirements.md#rf-09)). For the QR, the PRD
 
 They are separate entities on purpose. It does not say whether, on the same route, a supply can have both, whether one replaces the other, or whether a saved reading can be corrected.
 
+**Closed on 2026-10-10. Hugo's answer:** each supply on a route has one current result. **A reading always beats an incident**: a number gets billed, an incident only explains why there is no number. The usual case is a loose dog at 9, and the reader comes back at 11 and reads the meter. Between two readings, the most recent `fechaHora` wins, so correcting a reading means entering it again. Between two incidents, the most recent wins. Nothing is deleted: what is no longer current is kept and not shown. The order is by `fechaHora`, not by upload order, because the offline queue uploads out of order.
+
 <a id="p-08"></a>
 ## P-08 — Closing a route that still has unread supplies
 
 [RF-05](./02-requirements.md#rf-05) asks to close at the end of the day. [RF-22](./02-requirements.md#rf-22) stops the close when something is still unsent. It does not say whether a route can close with supplies still pending.
 
+**Closed on 2026-10-10. Hugo's answer:** yes. A route can close with supplies that have neither a reading nor an incident. They are billed by average, as today. The close screen says how many are left before confirming.
+
 <a id="p-09"></a>
 ## P-09 — "Do not allow a close" means a block or a warning
 
 The sentence is: if something is still unsent, say so clearly and do not allow a close that pretends everything is fine. That can be a disabled button until the upload finishes, or a different close that records what is still pending. It is not chosen.
+
+**Closed on 2026-10-10. Hugo's answer:** it is a block, not a warning. While anything entered on the phone is still unsent, the route cannot close: the app says how many readings and incidents are missing and offers to retry the upload. The API enforces the same rule: the close sends the ids of everything the phone entered, and if the server is missing any of them it answers `HAY_DATOS_SIN_SUBIR` and the route stays open.
 
 <a id="p-10"></a>
 ## P-10 — When the upload happens, and at what quality
@@ -140,6 +163,8 @@ Location is needed for the map ([RF-24](./02-requirements.md#rf-24)), the arrow 
 ## P-25 — Units of the average and of the dial
 
 `valor` is in the unit the meter shows. `consumoPromedio` is noted as m³ per period. With `multiplicador: 10` it does not say whether the average is already in real m³ or in turns of the dial.
+
+**Closed on 2026-10-10. Hugo's answer:** the average is in real m³, already multiplied, the same unit as `consumo`. The out-of-range rule of [P-01](#p-01) compares them directly, for every meter model.
 
 <a id="p-26"></a>
 ## P-26 — What "not yet uploaded" counts

@@ -1,24 +1,41 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
+import { StatusBadge } from '@/components/StatusBadge'
 import { colors } from '@/theme/colors'
+
+import type { StatusTone } from '@/components/StatusBadge'
 
 export type SupplyRowProps = {
   ordinal: string
   address: string
   holder: string
   status?: string
+  tone?: StatusTone
+  onPress?: () => void
 }
 
-export function SupplyRow({ ordinal, address, holder, status }: SupplyRowProps) {
+export function SupplyRow({ ordinal, address, holder, status, tone, onPress }: SupplyRowProps) {
   return (
-    <View style={styles.row}>
+    <TouchableOpacity
+      accessibilityRole="button"
+      activeOpacity={0.7}
+      disabled={!onPress}
+      onPress={onPress}
+      style={styles.row}
+    >
       <Text style={styles.ordinal}>{ordinal}</Text>
       <View style={styles.body}>
         <Text style={styles.address}>{address}</Text>
-        <Text style={styles.holder}>{holder}</Text>
+        {holder ? <Text style={styles.holder}>{holder}</Text> : null}
       </View>
-      {status ? <Text style={styles.status}>{status}</Text> : null}
-    </View>
+      {status ? (
+        tone ? (
+          <StatusBadge label={status} tone={tone} />
+        ) : (
+          <Text style={styles.status}>{status}</Text>
+        )
+      ) : null}
+    </TouchableOpacity>
   )
 }
 

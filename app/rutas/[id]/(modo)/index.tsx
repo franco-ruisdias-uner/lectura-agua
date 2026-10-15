@@ -1,25 +1,77 @@
-import { StyleSheet, Text, View } from 'react-native'
-import { Link, useGlobalSearchParams } from 'expo-router'
+import { FlatList, StyleSheet, Text, View } from 'react-native'
+import { router, useGlobalSearchParams } from 'expo-router'
 
+import { LoadingOverlay } from '@/components/LoadingOverlay'
+import { SupplyRow } from '@/components/SupplyRow'
+import { SyncStrip } from '@/components/SyncStrip'
+import { incidentReasonLabel } from '@/constants/incident-reasons'
+import { useRouteSupplies } from '@/hooks/use-route-data'
 import { colors } from '@/theme/colors'
 
+import type { SupplyStop } from '@/services/routes'
+import type { StatusTone } from '@/components/StatusBadge'
+
+const statusLabel: Record<SupplyStop['status'], string | undefined> = {
+  pending: undefined,
+  read: 'LEÍDO',
+  incident: 'NOVEDAD',
+}
+
+const statusTone: Record<SupplyStop['status'], StatusTone | undefined> = {
+  pending: undefined,
+  read: 'read',
+  incident: 'incident',
+}
+
+function holderFor(stop: SupplyStop): string {
+  if (!stop.reason) return stop.suministro.titular
+  return `${stop.suministro.titular} · ${incidentReasonLabel(stop.reason)}`
+}
+
 export default function RouteListScreen() {
-  // The id is on the parent segment. A tab does not receive it from useLocalSearchParams.
   const { id } = useGlobalSearchParams<{ id: string }>()
+  const routeKey = typeof id === 'string' ? id : ''
+  const { supplies, status } = useRouteSupplies(routeKey)
 
   return (
     <View style={styles.screen}>
-      {/* Placeholder. Compose the view in class from src/components. */}
-      <Text style={styles.title}>Lista</Text>
-      <Link
-        href={{
-          pathname: '/rutas/[id]/lectura/[suministroId]',
-          params: { id, suministroId: '89' },
-        }}
-        style={styles.link}
-      >
-        Abrir suministro
-      </Link>
+      <FlatList
+        data={supplies?.stops ?? []}
+        keyExtractor={(item) => item.suministro.id}
+        contentContainerStyle={styles.list}
+        ListHeaderComponent={
+          status === 'ready' ? (
+            <View style={styles.header}>
+              <SyncStrip label={`Sin subir: ${supplies?.unsynced ?? 0}`} />
+            </View>
+          ) : null
+        }
+        ListEmptyComponent={
+          status === 'ready' ? (
+            <Text style={styles.message}>Esta ruta no tiene suministros</Text>
+          ) : status === 'missing' ? (
+            <Text style={styles.message}>No encontramos esa ruta</Text>
+          ) : status === 'error' ? (
+            <Text style={styles.message}>No se pudo cargar la ruta</Text>
+          ) : null
+        }
+        renderItem={({ item }) => (
+          <SupplyRow
+            ordinal={String(item.position)}
+            address={item.suministro.direccion}
+            holder={holderFor(item)}
+            status={statusLabel[item.status]}
+            tone={statusTone[item.status]}
+            onPress={() =>
+              router.push({
+                pathname: '/rutas/[id]/lectura/[suministroId]',
+                params: { id: routeKey, suministroId: item.suministro.id },
+              })
+            }
+          />
+        )}
+      />
+      <LoadingOverlay visible={status === 'loading'} label="Cargando suministros" />
     </View>
   )
 }
@@ -28,15 +80,15 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  list: {
     padding: 16,
-    gap: 16,
   },
-  title: {
-    color: colors.text,
-    fontSize: 22,
+  header: {
+    marginBottom: 8,
   },
-  link: {
-    color: colors.accent,
-    fontSize: 18,
+  message: {
+    color: colors.muted,
+    fontSize: 16,
   },
 })
