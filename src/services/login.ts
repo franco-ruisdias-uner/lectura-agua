@@ -1,29 +1,22 @@
+import { httpClient } from '@/api/client'
 import { loginAccounts } from '@/mocks'
 
-import type { Usuario } from '@/types/entities'
+import type { RespuestaUno } from '@/types/api'
+import type { AuthResponse } from '@/types/auth'
 
-// P-13: the username contract is open. This checks the mock legajo and password only.
-// P-14: no fingerprint and no stored session.
-const mockDelayMs = 800
-
-export async function signIn(legajo: string, password: string): Promise<Usuario> {
-  // The mock waits so the loading overlay can be seen. A real request takes its own time.
-  await new Promise((resolve) => {
-    setTimeout(resolve, mockDelayMs)
+export async function signIn(legajo: string, password: string): Promise<AuthResponse> {
+  const response = await httpClient.post<RespuestaUno<AuthResponse>>('/auth/ingreso', {
+    legajo,
+    contrasena: password,
   })
-
-  const account = loginAccounts.find(
-    (item) =>
-      item.legajo.toLowerCase() === legajo.toLowerCase() && item.password === password,
-  )
-
-  if (!account) {
-    throw new Error('Legajo o contraseña incorrectos')
-  }
-
-  return account.usuario
+  return response.data.datos
 }
 
+export async function signOut(): Promise<void> {
+  await httpClient.post('/auth/salida')
+}
+
+// P-13: el contrato del usuario no tiene contraseña. El hint de demo usa el mock.
 export function demoSignIn(): { legajo: string; password: string } | null {
   const account = loginAccounts[0]
   if (!account) {

@@ -3,10 +3,11 @@ import { StyleSheet, Text, View } from 'react-native'
 import { router, useGlobalSearchParams } from 'expo-router'
 
 import { Button } from '@/components/Button'
+import { ErrorView } from '@/components/ErrorView'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { Stat } from '@/components/Stat'
+import { useCloseRoute } from '@/hooks/use-close-route'
 import { useRouteSummary } from '@/hooks/use-route-data'
-import { closeRoute } from '@/services/routes'
 import { colors } from '@/theme/colors'
 
 function count(value: number, one: string, many: string): string {
@@ -16,52 +17,44 @@ function count(value: number, one: string, many: string): string {
 export default function RouteSummaryScreen() {
   const { id } = useGlobalSearchParams<{ id: string }>()
   const routeKey = typeof id === 'string' ? id : ''
-  const { summary, status } = useRouteSummary(routeKey)
+  const { summary, status, error } = useRouteSummary(routeKey)
+  const { run, saving, error: closeError, setError: setCloseError } = useCloseRoute()
   const [confirmingPending, setConfirmingPending] = useState(false)
-  const [closing, setClosing] = useState(false)
   const [closeMessage, setCloseMessage] = useState<string | null>(null)
 
   const close = async () => {
-    setClosing(true)
     setCloseMessage(null)
+    setCloseError(null)
 
-    try {
-      const result = await closeRoute(routeKey)
-      if (result.ok) {
-        router.replace({ pathname: '/rutas/[id]/cerrada', params: { id: routeKey } })
-        return
-      }
+    const result = await run(routeKey)
+    if (!result) return
 
-      setConfirmingPending(false)
-      if (result.reason === 'unsynced') {
-        // P-09: a block, not a warning. The route stays open until everything is sent.
-        const missing = [
-          result.readings > 0 ? count(result.readings, 'lectura', 'lecturas') : null,
-          result.incidents > 0 ? count(result.incidents, 'novedad', 'novedades') : null,
-        ]
-          .filter(Boolean)
-          .join(' y ')
-        setCloseMessage(`Faltan subir ${missing}. Esperá a tener señal y probá de nuevo.`)
-      } else if (result.reason === 'closed') {
-        setCloseMessage('Esta ruta ya está cerrada.')
-      } else {
-        setCloseMessage('No encontramos esa ruta')
-      }
-    } catch {
-      setCloseMessage('No se pudo cerrar la ruta. Probá de nuevo.')
-    } finally {
-      setClosing(false)
+    if (result.ok) {
+      router.replace({ pathname: '/rutas/[id]/cerrada', params: { id: routeKey } })
+      return
+    }
+
+    setConfirmingPending(false)
+    if (result.reason === 'unsynced') {
+      // P-09: es un bloqueo, no un aviso. La ruta sigue abierta.
+      setCloseMessage(result.mensaje)
+    } else if (result.reason === 'closed') {
+      setCloseMessage(result.mensaje)
+    } else {
+      setCloseMessage('No encontramos esa ruta')
     }
   }
 
   const onClosePress = () => {
-    // P-08: pending supplies do not stop the close, but the reader sees how many first.
+    // P-08: los pendientes no impiden el cierre, pero el lector los ve antes.
     if (summary && summary.pending > 0 && !confirmingPending) {
       setConfirmingPending(true)
       return
     }
     void close()
   }
+
+  const notice = closeMessage ?? closeError
 
   return (
     <View style={styles.screen}>
@@ -73,9 +66,11 @@ export default function RouteSummaryScreen() {
           <Stat label="Sin subir" value={String(summary.unsynced)} />
         </>
       ) : null}
-      {status === 'missing' ? <Text style={styles.message}>No encontramos esa ruta</Text> : null}
+      {status === 'missing' ? (
+        <ErrorView label="No encontramos esa ruta" style={styles.errorFill} />
+      ) : null}
       {status === 'error' ? (
-        <Text style={styles.message}>No se pudo cargar el resumen</Text>
+        <ErrorView label={error ?? 'No se pudo cargar el resumen'} style={styles.errorFill} />
       ) : null}
       {confirmingPending && summary ? (
         <Text style={styles.notice}>
@@ -83,10 +78,10 @@ export default function RouteSummaryScreen() {
           facturan por promedio.
         </Text>
       ) : null}
-      {closeMessage ? <Text style={styles.notice}>{closeMessage}</Text> : null}
+      {notice ? <Text style={styles.notice}>{notice}</Text> : null}
       {summary ? (
         <Button
-          label={confirmingPending ? 'Cerrar igual' : closeMessage ? 'Probar de nuevo' : 'Cerrar ruta'}
+          label={confirmingPending ? 'Cerrar igual' : notice ? 'Probar de nuevo' : 'Cerrar ruta'}
           onPress={onClosePress}
         />
       ) : null}
@@ -94,8 +89,8 @@ export default function RouteSummaryScreen() {
         <Button label="Seguir leyendo" variant="secondary" onPress={() => setConfirmingPending(false)} />
       ) : null}
       <LoadingOverlay
-        visible={status === 'loading' || closing}
-        label={closing ? 'Cerrando la ruta' : 'Cargando resumen'}
+        visible={status === 'loading' || saving}
+        label={saving ? 'Cerrando la ruta' : 'Cargando resumen'}
       />
     </View>
   )
@@ -108,9 +103,8 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 16,
   },
-  message: {
-    color: colors.muted,
-    fontSize: 16,
+  errorFill: {
+    flex: 1,
   },
   notice: {
     color: colors.text,

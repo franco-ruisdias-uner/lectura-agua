@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFocusEffect } from 'expo-router'
 
+import { apiErrorMessage, isMissingResource } from '@/api/errors'
 import {
   getReadingContext,
   getRouteDaySummary,
@@ -27,26 +28,30 @@ function useFocusedLoad(load: (mode: 'initial' | 'refresh') => Promise<void>) {
 export function useRouteOverviews() {
   const [overviews, setOverviews] = useState<RouteOverview[]>([])
   const [status, setStatus] = useState<LoadStatus>('loading')
+  const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async (mode: 'initial' | 'refresh') => {
     if (mode === 'initial') setStatus('loading')
 
     try {
       setOverviews(await listRouteOverviews())
+      setError(null)
       setStatus('ready')
-    } catch {
+    } catch (caught) {
+      setError(apiErrorMessage(caught, 'No se pudieron cargar las rutas'))
       setStatus('error')
     }
   }, [])
 
   useFocusedLoad(load)
 
-  return { overviews, status }
+  return { overviews, status, error }
 }
 
 export function useRouteSupplies(routeKey: string) {
   const [supplies, setSupplies] = useState<RouteSupplies | null>(null)
   const [status, setStatus] = useState<LoadStatus>('loading')
+  const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(
     async (mode: 'initial' | 'refresh') => {
@@ -55,8 +60,16 @@ export function useRouteSupplies(routeKey: string) {
       try {
         const next = await listRouteSupplies(routeKey)
         setSupplies(next)
+        setError(null)
         setStatus(next ? 'ready' : 'missing')
-      } catch {
+      } catch (caught) {
+        if (isMissingResource(caught)) {
+          setSupplies(null)
+          setError(null)
+          setStatus('missing')
+          return
+        }
+        setError(apiErrorMessage(caught, 'No se pudo cargar la ruta'))
         setStatus('error')
       }
     },
@@ -65,12 +78,13 @@ export function useRouteSupplies(routeKey: string) {
 
   useFocusedLoad(load)
 
-  return { supplies, status }
+  return { supplies, status, error }
 }
 
 export function useRouteSummary(routeKey: string) {
   const [summary, setSummary] = useState<RouteDaySummary | null>(null)
   const [status, setStatus] = useState<LoadStatus>('loading')
+  const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(
     async (mode: 'initial' | 'refresh') => {
@@ -79,8 +93,16 @@ export function useRouteSummary(routeKey: string) {
       try {
         const next = await getRouteDaySummary(routeKey)
         setSummary(next)
+        setError(null)
         setStatus(next ? 'ready' : 'missing')
-      } catch {
+      } catch (caught) {
+        if (isMissingResource(caught)) {
+          setSummary(null)
+          setError(null)
+          setStatus('missing')
+          return
+        }
+        setError(apiErrorMessage(caught, 'No se pudo cargar el resumen'))
         setStatus('error')
       }
     },
@@ -89,12 +111,13 @@ export function useRouteSummary(routeKey: string) {
 
   useFocusedLoad(load)
 
-  return { summary, status }
+  return { summary, status, error }
 }
 
 export function useReading(routeKey: string, suministroId: string) {
   const [context, setContext] = useState<ReadingContext | null>(null)
   const [status, setStatus] = useState<LoadStatus>('loading')
+  const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setStatus('loading')
@@ -102,9 +125,17 @@ export function useReading(routeKey: string, suministroId: string) {
     try {
       const next = await getReadingContext(routeKey, suministroId)
       setContext(next)
+      setError(null)
       setStatus(next ? 'ready' : 'missing')
-    } catch {
+    } catch (caught) {
+      if (isMissingResource(caught)) {
+        setContext(null)
+        setError(null)
+        setStatus('missing')
+        return
+      }
       setContext(null)
+      setError(apiErrorMessage(caught, 'No se pudo cargar la lectura'))
       setStatus('error')
     }
   }, [routeKey, suministroId])
@@ -113,5 +144,5 @@ export function useReading(routeKey: string, suministroId: string) {
     void load()
   }, [load])
 
-  return { context, status, reload: load }
+  return { context, status, error, reload: load }
 }

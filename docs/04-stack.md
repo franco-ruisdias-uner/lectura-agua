@@ -46,9 +46,9 @@ Install a package only when the backlog item asks for it.
 
 ## Already installed
 
-`expo`, `expo-router`, `expo-status-bar`, `react-native`, `react-hook-form`, `zod`, `@hookform/resolvers`, `@react-native-vector-icons/ionicons`.
+`expo`, `expo-router`, `expo-status-bar`, `react-native`, `react-hook-form`, `zod`, `@hookform/resolvers`, `@react-native-vector-icons/ionicons`, `expo-camera`, `expo-image-picker`, `expo-location`, `react-native-maps`, `expo-sensors`.
 
-None of the packages in the capability table are installed yet.
+The rest of the capability table is installed when the backlog item asks for it.
 
 ## Repo conventions the PRD does not mention
 

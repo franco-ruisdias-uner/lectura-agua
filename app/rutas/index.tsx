@@ -1,6 +1,7 @@
 import { FlatList, StyleSheet, Text, View } from 'react-native'
 import { router } from 'expo-router'
 
+import { ErrorView } from '@/components/ErrorView'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { RouteCard } from '@/components/RouteCard'
 import { useRouteOverviews } from '@/hooks/use-route-data'
@@ -24,7 +25,7 @@ function routeDetail(overview: RouteOverview): string {
 }
 
 export default function TodaysRoutesScreen() {
-  const { overviews, status } = useRouteOverviews()
+  const { overviews, status, error } = useRouteOverviews()
 
   return (
     <View style={styles.screen}>
@@ -37,7 +38,10 @@ export default function TodaysRoutesScreen() {
           status === 'ready' ? (
             <Text style={styles.message}>No hay rutas para hoy</Text>
           ) : status === 'error' ? (
-            <Text style={styles.message}>No se pudieron cargar las rutas</Text>
+            <ErrorView
+              label={error ?? 'No se pudieron cargar las rutas'}
+              style={styles.errorFill}
+            />
           ) : null
         }
         renderItem={({ item }) => (
@@ -45,7 +49,7 @@ export default function TodaysRoutesScreen() {
             title={routeTitle(item)}
             detail={routeDetail(item)}
             status={routeStatusLabel[item.route.estado]}
-            onPress={() => router.push(`/rutas/${item.route.numero}`)}
+            onPress={() => router.push(`/rutas/${item.route.id}`)}
           />
         )}
       />
@@ -64,6 +68,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   list: {
+    flexGrow: 1,
     padding: 16,
   },
   separator: {
@@ -72,5 +77,8 @@ const styles = StyleSheet.create({
   message: {
     color: colors.muted,
     fontSize: 16,
+  },
+  errorFill: {
+    flex: 1,
   },
 })

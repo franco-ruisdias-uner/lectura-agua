@@ -8,7 +8,7 @@ source: PRD.pdf, explicit gaps and contradictions
 
 [Index](./README.md) · previous: [06-entities.md](./06-entities.md) · next: [08-backlog.md](./08-backlog.md)
 
-Hugo asked for gaps to be reported, not resolved in silence. Every item here is open, except [P-01](#p-01), [P-03](#p-03), [P-04](#p-04), [P-07](#p-07), [P-08](#p-08), [P-09](#p-09), [P-25](#p-25), and [P-28](#p-28), which already have a decision. Implementing an answer for the rest changes the request.
+Hugo asked for gaps to be reported, not resolved in silence. Every item here is open, except [P-01](#p-01), [P-03](#p-03), [P-04](#p-04), [P-07](#p-07), [P-08](#p-08), [P-09](#p-09), [P-21](#p-21), [P-25](#p-25), and [P-28](#p-28), which already have a decision. Implementing an answer for the rest changes the request.
 
 When a question is closed, write the decision under the item and update the requirement that cites it. Until then the code does not choose.
 
@@ -143,6 +143,8 @@ The API envelope pages (`porPagina: 50`). [RF-04](./02-requirements.md#rf-04) as
 ## P-21 — When GPS turns on
 
 Location is needed for the map ([RF-24](./02-requirements.md#rf-24)), the arrow ([RF-25](./02-requirements.md#rf-25)), and the coordinate saved with the reading ([RF-26](./02-requirements.md#rf-26)). [RNF-02](./02-requirements.md#rnf-02) forbids leaving GPS on all day. It does not say on which screens the position is requested.
+
+**Closed on 2026-10-17.** Position is requested on the map screen (while that tab is focused) and once when a reading is saved. It is not requested when the reading screen opens. Distance and the arrow are informational; there is no pass/fail radius. If permission is denied or the fix fails, the reading still saves with `coordenadas: null`.
 
 <a id="p-22"></a>
 ## P-22 — A new-route alert where there is no signal

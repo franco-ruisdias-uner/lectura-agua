@@ -1,6 +1,7 @@
 import { FlatList, StyleSheet, Text, View } from 'react-native'
 import { router, useGlobalSearchParams } from 'expo-router'
 
+import { ErrorView } from '@/components/ErrorView'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { SupplyRow } from '@/components/SupplyRow'
 import { SyncStrip } from '@/components/SyncStrip'
@@ -31,7 +32,7 @@ function holderFor(stop: SupplyStop): string {
 export default function RouteListScreen() {
   const { id } = useGlobalSearchParams<{ id: string }>()
   const routeKey = typeof id === 'string' ? id : ''
-  const { supplies, status } = useRouteSupplies(routeKey)
+  const { supplies, status, error } = useRouteSupplies(routeKey)
 
   return (
     <View style={styles.screen}>
@@ -50,9 +51,9 @@ export default function RouteListScreen() {
           status === 'ready' ? (
             <Text style={styles.message}>Esta ruta no tiene suministros</Text>
           ) : status === 'missing' ? (
-            <Text style={styles.message}>No encontramos esa ruta</Text>
+            <ErrorView label="No encontramos esa ruta" style={styles.errorFill} />
           ) : status === 'error' ? (
-            <Text style={styles.message}>No se pudo cargar la ruta</Text>
+            <ErrorView label={error ?? 'No se pudo cargar la ruta'} style={styles.errorFill} />
           ) : null
         }
         renderItem={({ item }) => (
@@ -82,6 +83,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   list: {
+    flexGrow: 1,
     padding: 16,
   },
   header: {
@@ -90,5 +92,8 @@ const styles = StyleSheet.create({
   message: {
     color: colors.muted,
     fontSize: 16,
+  },
+  errorFill: {
+    flex: 1,
   },
 })

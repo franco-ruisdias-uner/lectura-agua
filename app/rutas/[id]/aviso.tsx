@@ -1,33 +1,50 @@
-import { useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 
 import { Button } from '@/components/Button'
+import { ErrorView } from '@/components/ErrorView'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { useReading } from '@/hooks/use-route-data'
-import { readingConsumption, saveReading } from '@/services/routes'
+import { useSaveReading } from '@/hooks/use-save-reading'
+import { readingConsumption } from '@/services/routes'
 import { colors } from '@/theme/colors'
+
+import type { Coordenadas } from '@/types/entities'
 
 function formatMeters(value: number): string {
   return new Intl.NumberFormat('es-AR').format(value)
 }
 
-// P-01, P-04: shown when the number is out of range. It never blocks: the reader corrects or confirms.
+function parseCoordinates(latitud: string | undefined, longitud: string | undefined): Coordenadas | null {
+  if (typeof latitud !== 'string' || typeof longitud !== 'string') return null
+  const lat = Number(latitud)
+  const lng = Number(longitud)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  return { latitud: lat, longitud: lng }
+}
+
+// P-01, P-04: aviso cuando el número está fuera de rango. Nunca bloquea: corregir o confirmar.
 export default function ConsumptionWarningScreen() {
-  const { id, suministroId, valor, fotoUri } = useLocalSearchParams<{
+  const { id, suministroId, valor, fotoUri, latitud, longitud } = useLocalSearchParams<{
     id: string
     suministroId: string
     valor: string
     fotoUri: string
+    latitud?: string
+    longitud?: string
   }>()
   const routeKey = typeof id === 'string' ? id : ''
   const supplyId = typeof suministroId === 'string' ? suministroId : ''
   const value = Number(valor)
   const photo = typeof fotoUri === 'string' ? fotoUri : ''
+  // P-21: reusa el fix de antes de abrir esta pantalla. No pide GPS de nuevo.
+  const coordenadas = parseCoordinates(
+    typeof latitud === 'string' ? latitud : undefined,
+    typeof longitud === 'string' ? longitud : undefined,
+  )
 
-  const { context, status } = useReading(routeKey, supplyId)
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
+  const { context, status, error: loadError } = useReading(routeKey, supplyId)
+  const { run, saving, error: saveError, setError: setSaveError } = useSaveReading()
 
   const consumo = context
     ? readingConsumption(value, context.suministro.lecturaAnterior, context.medidor.multiplicador)
@@ -36,36 +53,31 @@ export default function ConsumptionWarningScreen() {
 
   const confirm = async () => {
     if (saving) return
-    setSaving(true)
     setSaveError(null)
 
-    try {
-      const result = await saveReading({
-        routeKey,
-        suministroId: supplyId,
-        valor: value,
-        fotoUri: photo,
-        confirmed: true,
-      })
+    const result = await run({
+      routeKey,
+      suministroId: supplyId,
+      valor: value,
+      fotoUri: photo,
+      confirmed: true,
+      coordenadas,
+    })
 
-      if (!result.ok) {
-        setSaveError('No se pudo guardar la lectura')
-        return
-      }
+    if (!result) return
 
-      // Replace the warning itself. Dismissing it and then navigating drops the second step on iOS.
-      if (result.nextSuministroId) {
-        router.replace({
-          pathname: '/rutas/[id]/lectura/[suministroId]',
-          params: { id: routeKey, suministroId: result.nextSuministroId },
-        })
-      } else {
-        router.replace({ pathname: '/rutas/[id]', params: { id: routeKey } })
-      }
-    } catch {
+    if (!result.ok) {
       setSaveError('No se pudo guardar la lectura')
-    } finally {
-      setSaving(false)
+      return
+    }
+
+    if (result.nextSuministroId) {
+      router.replace({
+        pathname: '/rutas/[id]/lectura/[suministroId]',
+        params: { id: routeKey, suministroId: result.nextSuministroId },
+      })
+    } else {
+      router.replace({ pathname: '/rutas/[id]', params: { id: routeKey } })
     }
   }
 
@@ -92,12 +104,14 @@ export default function ConsumptionWarningScreen() {
           <Text style={styles.body}>Mirá bien el medidor. Si el número es correcto, confirmalo.</Text>
         </>
       ) : null}
-      {status === 'missing' ? <Text style={styles.body}>No encontramos ese suministro</Text> : null}
-      {status === 'error' ? <Text style={styles.body}>No se pudo cargar la lectura</Text> : null}
+      {status === 'missing' ? <ErrorView label="No encontramos ese suministro" /> : null}
+      {status === 'error' ? (
+        <ErrorView label={loadError ?? 'No se pudo cargar la lectura'} />
+      ) : null}
       {saveError ? <Text style={styles.error}>{saveError}</Text> : null}
       <Button label="Corregir" variant="secondary" onPress={() => router.back()} />
       <Button label="Confirmar" onPress={() => void confirm()} />
-      <LoadingOverlay visible={status === 'loading'} label="Cargando" />
+      <LoadingOverlay visible={status === 'loading' || saving} label={saving ? 'Guardando' : 'Cargando'} />
     </View>
   )
 }

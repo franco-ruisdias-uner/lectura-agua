@@ -12,17 +12,25 @@ import {
   View,
 } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
-import * as ImagePicker from 'expo-image-picker'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@react-native-vector-icons/ionicons'
 
 import { Button } from '@/components/Button'
+import { ErrorView } from '@/components/ErrorView'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
+import { QrScanner } from '@/components/QrScanner'
 import { StatusBadge } from '@/components/StatusBadge'
 import { useReading } from '@/hooks/use-route-data'
+import { useSaveReading } from '@/hooks/use-save-reading'
+import { pickPhoto } from '@/lib/pick-photo'
+import { captureReadingCoordinates } from '@/lib/reading-location'
 import { readingPhotoSource } from '@/lib/reading-photo'
-import { isOutOfRange, readingConsumption, saveReading } from '@/services/routes'
+import { isOutOfRange, readingConsumption } from '@/services/routes'
 import { colors } from '@/theme/colors'
+
+import type { Coordenadas } from '@/types/entities'
+
+type QrCheck = 'match' | 'unconfirmed'
 
 function formatMeters(value: number): string {
   return new Intl.NumberFormat('es-AR').format(value)
@@ -34,36 +42,15 @@ function formatDayMonth(iso: string): string {
   return `${match[3]}/${match[2]}`
 }
 
-async function pickPhoto(source: 'camera' | 'library'): Promise<string | null> {
-  const permission =
-    source === 'camera'
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync()
-
-  if (!permission.granted) {
-    const message =
-      source === 'camera'
-        ? 'Necesitamos la cámara para fotografiar el medidor.'
-        : 'Necesitamos la galería para adjuntar una foto del medidor.'
-    Alert.alert('Permiso', message)
-    return null
+function coordinatesToParams(coordenadas: Coordenadas | null): {
+  latitud?: string
+  longitud?: string
+} {
+  if (!coordenadas) return {}
+  return {
+    latitud: String(coordenadas.latitud),
+    longitud: String(coordenadas.longitud),
   }
-
-  const result =
-    source === 'camera'
-      ? await ImagePicker.launchCameraAsync({
-          mediaTypes: ['images'],
-          allowsEditing: true,
-          quality: 0.7,
-        })
-      : await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
-          allowsEditing: true,
-          quality: 0.7,
-        })
-
-  if (result.canceled) return null
-  return result.assets[0]?.uri ?? null
 }
 
 export default function ReadingScreen() {
@@ -71,20 +58,22 @@ export default function ReadingScreen() {
   const routeKey = typeof id === 'string' ? id : ''
   const supplyId = typeof suministroId === 'string' ? suministroId : ''
   const insets = useSafeAreaInsets()
-  const { context, status } = useReading(routeKey, supplyId)
+  const { context, status, error: loadError } = useReading(routeKey, supplyId)
+  const { run, saving, error: saveErrorFromApi, setError: setSaveError } = useSaveReading()
   const current = context?.suministro.id === supplyId ? context : null
-
+  const [qrOpen, setQrOpen] = useState(false)
+  // P-06: el escaneo es opcional. Coincidir es feedback; un mismatch no bloquea el guardado.
+  const [qrCheck, setQrCheck] = useState<QrCheck | null>(null)
   const [digits, setDigits] = useState('')
   const [photoUri, setPhotoUri] = useState<string | null>(null)
   const [photoSheetOpen, setPhotoSheetOpen] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     setDigits('')
     setPhotoUri(null)
     setSaveError(null)
-  }, [supplyId])
+    setQrCheck(null)
+  }, [setSaveError, supplyId])
 
   useEffect(() => {
     if (!current?.lectura) return
@@ -96,13 +85,24 @@ export default function ReadingScreen() {
     current && valor !== null && Number.isInteger(valor)
       ? readingConsumption(valor, current.suministro.lecturaAnterior, current.medidor.multiplicador)
       : null
-  const outOfRange = current && consumo !== null ? isOutOfRange(consumo) : false
+  const outOfRange =
+    current && consumo !== null ? isOutOfRange(consumo, current.suministro.consumoPromedio) : false
 
-  // A saved reading is the current result. The screen only shows it.
+  // Si ya hay una lectura vigente, la pantalla sólo la muestra.
   const locked = current?.lectura != null
   const shownPhoto = locked ? (current?.lectura?.fotoUri ?? null) : photoUri
 
   const closePhotoSheet = () => setPhotoSheetOpen(false)
+
+  const onQrScan = (data: string) => {
+    const expected = current?.medidor.codigoQr ?? null
+    // P-06: si el QR es obligatorio y qué hacer con un mismatch sigue abierto.
+    if (expected != null && data === expected) {
+      setQrCheck('match')
+    } else {
+      setQrCheck('unconfirmed')
+    }
+  }
 
   const choosePhoto = async (source: 'camera' | 'library') => {
     try {
@@ -129,46 +129,50 @@ export default function ReadingScreen() {
       return
     }
 
-    setSaving(true)
     setSaveError(null)
 
-    try {
-      const result = await saveReading({
-        routeKey,
-        suministroId: supplyId,
-        valor,
-        fotoUri: photoUri,
-        confirmed: false,
-      })
+    // P-21: un fix al guardar, no al abrir la pantalla.
+    const coordenadas = await captureReadingCoordinates()
+    const result = await run({
+      routeKey,
+      suministroId: supplyId,
+      valor,
+      fotoUri: photoUri,
+      confirmed: false,
+      coordenadas,
+    })
 
-      if (!result.ok) {
-        if (result.reason === 'needs-confirmation') {
-          router.push({
-            pathname: '/rutas/[id]/aviso',
-            params: { id: routeKey, suministroId: supplyId, valor: String(valor), fotoUri: photoUri },
-          })
-        } else if (result.reason === 'no-photo') {
-          setSaveError('Sacá una foto del medidor para guardar')
-        } else {
-          setSaveError('No se pudo guardar la lectura')
-        }
-        return
-      }
+    if (!result) return
 
-      if (result.nextSuministroId) {
-        router.replace({
-          pathname: '/rutas/[id]/lectura/[suministroId]',
-          params: { id: routeKey, suministroId: result.nextSuministroId },
+    if (!result.ok) {
+      if (result.reason === 'needs-confirmation') {
+        router.push({
+          pathname: '/rutas/[id]/aviso',
+          params: {
+            id: routeKey,
+            suministroId: supplyId,
+            valor: String(valor),
+            fotoUri: photoUri,
+            ...coordinatesToParams(coordenadas),
+          },
         })
-        return
+      } else if (result.reason === 'no-photo') {
+        setSaveError('Sacá una foto del medidor para guardar')
+      } else {
+        setSaveError('No se pudo guardar la lectura')
       }
-
-      router.replace({ pathname: '/rutas/[id]', params: { id: routeKey } })
-    } catch {
-      setSaveError('No se pudo guardar la lectura')
-    } finally {
-      setSaving(false)
+      return
     }
+
+    if (result.nextSuministroId) {
+      router.replace({
+        pathname: '/rutas/[id]/lectura/[suministroId]',
+        params: { id: routeKey, suministroId: result.nextSuministroId },
+      })
+      return
+    }
+
+    router.replace({ pathname: '/rutas/[id]', params: { id: routeKey } })
   }
 
   const anterior = current?.suministro.lecturaAnterior
@@ -225,6 +229,12 @@ export default function ReadingScreen() {
               Consumo: {formatMeters(consumo)} m³ - {outOfRange ? 'fuera de lo habitual' : 'normal'}
             </Text>
           ) : null}
+          {qrCheck === 'match' ? (
+            <Text style={styles.qrMatch}>Este medidor coincide</Text>
+          ) : null}
+          {qrCheck === 'unconfirmed' ? (
+            <Text style={styles.qrUnconfirmed}>No se pudo confirmar el medidor</Text>
+          ) : null}
           {shownPhoto ? (
             locked ? (
               <Image
@@ -249,17 +259,38 @@ export default function ReadingScreen() {
                 </TouchableOpacity>
               </View>
             )
-          ) : locked ? null : (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Apretar para tomar foto"
-              onPress={() => setPhotoSheetOpen(true)}
-              style={styles.photo}
-            >
-              <Ionicons name="image-outline" size={40} color={colors.muted} />
-              <Text style={styles.photoLabel}>Apretar para tomar foto</Text>
-            </Pressable>
+          ) : null}
+          {locked ? null : (
+            <View style={styles.captureRow}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Escanear QR"
+                activeOpacity={0.7}
+                onPress={() => setQrOpen(true)}
+                style={styles.captureAction}
+              >
+                <Ionicons name="qr-code-outline" size={28} color={colors.accent} />
+                <Text style={styles.captureLabel}>Escanear QR</Text>
+              </TouchableOpacity>
+              {shownPhoto ? null : (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Tomar foto"
+                  activeOpacity={0.7}
+                  onPress={() => setPhotoSheetOpen(true)}
+                  style={styles.captureAction}
+                >
+                  <Ionicons name="camera-outline" size={28} color={colors.accent} />
+                  <Text style={styles.captureLabel}>Tomar foto</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
+          <QrScanner
+            visible={qrOpen}
+            onClose={() => setQrOpen(false)}
+            onScan={onQrScan}
+          />
           <Modal
             visible={photoSheetOpen}
             transparent
@@ -290,7 +321,7 @@ export default function ReadingScreen() {
                     </View>
                     <Text style={styles.sourceLabel}>Cámara</Text>
                   </TouchableOpacity>
-                  {/* P-23: whether a gallery photo counts stays open. */}
+                  {/* P-23: si la foto de la galería cuenta sigue abierto. */}
                   <TouchableOpacity
                     accessibilityRole="button"
                     accessibilityLabel="Galería"
@@ -309,7 +340,7 @@ export default function ReadingScreen() {
               </View>
             </View>
           </Modal>
-          {saveError ? <Text style={styles.error}>{saveError}</Text> : null}
+          {saveErrorFromApi ? <Text style={styles.error}>{saveErrorFromApi}</Text> : null}
           {locked ? null : (
             <>
               <Button
@@ -327,8 +358,12 @@ export default function ReadingScreen() {
           )}
         </>
       ) : null}
-      {status === 'missing' ? <Text style={styles.line}>No encontramos ese suministro</Text> : null}
-      {status === 'error' ? <Text style={styles.line}>No se pudo cargar la lectura</Text> : null}
+      {status === 'missing' ? (
+        <ErrorView label="No encontramos ese suministro" style={styles.errorFill} />
+      ) : null}
+      {status === 'error' ? (
+        <ErrorView label={loadError ?? 'No se pudo cargar la lectura'} style={styles.errorFill} />
+      ) : null}
       <LoadingOverlay visible={status === 'loading' || saving} label={saving ? 'Guardando' : 'Cargando'} />
     </ScrollView>
   )
@@ -336,9 +371,13 @@ export default function ReadingScreen() {
 
 const styles = StyleSheet.create({
   screen: {
+    flexGrow: 1,
     backgroundColor: colors.background,
     padding: 16,
     gap: 16,
+  },
+  errorFill: {
+    flex: 1,
   },
   title: {
     color: colors.text,
@@ -372,16 +411,13 @@ const styles = StyleSheet.create({
     color: colors.accentMuted,
     fontSize: 16,
   },
-  photo: {
-    minHeight: 160,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+  qrMatch: {
+    color: colors.accent,
+    fontSize: 16,
+  },
+  qrUnconfirmed: {
+    color: colors.muted,
+    fontSize: 16,
   },
   previewFrame: {
     position: 'relative',
@@ -402,11 +438,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(22, 24, 38, 0.72)',
-  },
-  photoLabel: {
-    color: colors.muted,
-    fontSize: 16,
-    textAlign: 'center',
   },
   sheetRoot: {
     flex: 1,
@@ -455,5 +486,25 @@ const styles = StyleSheet.create({
   sourceLabel: {
     color: colors.text,
     fontSize: 16,
+  },
+  captureLabel: {
+    color: colors.text,
+    fontSize: 14,
+  },
+  captureAction: {
+    flex: 1,
+    minHeight: 72,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+  },
+  captureRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
 })

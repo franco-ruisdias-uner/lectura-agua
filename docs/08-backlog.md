@@ -65,10 +65,9 @@ These items are written down so they are not lost. They are not started.
 
 | Id | Work | Blocked by |
 | --- | --- | --- |
-| <a id="b-11"></a>B-11 | Meter QR. | [P-06](./07-open-questions.md#p-06) |
+| <a id="b-11"></a>B-11 | Meter QR. The optional scan and match message are in place; a mismatch does not change save. Still blocked for whether the scan is required and what a mismatch must do. | [P-06](./07-open-questions.md#p-06) |
 | <a id="b-12"></a>B-12 | Sign-in with username and password, then fingerprint, on a shared phone. Token in `expo-secure-store`. | [P-13](./07-open-questions.md#p-13), [P-14](./07-open-questions.md#p-14), [P-27](./07-open-questions.md#p-27) |
 | <a id="b-13"></a>B-13 | Automatic upload when the signal returns, an honest counter, and deletion of what already uploaded. | [P-10](./07-open-questions.md#p-10), [P-11](./07-open-questions.md#p-11), [P-26](./07-open-questions.md#p-26) |
-| <a id="b-15"></a>B-15 | Map, magnetometer arrow, and a coordinate saved with the reading. GPS only when it is needed. | [P-21](./07-open-questions.md#p-21) |
 | <a id="b-16"></a>B-16 | Video of how to read the model, including with no signal. | [P-05](./07-open-questions.md#p-05), [P-20](./07-open-questions.md#p-20) |
 | <a id="b-17"></a>B-17 | New-route alert and the 17:00 reminder. | [P-22](./07-open-questions.md#p-22) |
 | <a id="b-18"></a>B-18 | Incidents grouped for administration. | [P-15](./07-open-questions.md#p-15), [P-16](./07-open-questions.md#p-16) |
@@ -79,6 +78,7 @@ These items are written down so they are not lost. They are not started.
 | --- | --- | --- | --- |
 | <a id="b-10"></a>B-10 | Out-of-range consumption warning, with confirm or correct, and a distinct haptic. | RF-10, [P-01](./07-open-questions.md#p-01), [P-04](./07-open-questions.md#p-04), [P-25](./07-open-questions.md#p-25) | Saving an out-of-range value opens the warning with the real numbers. `Corregir` goes back to the number. `Confirmar` saves with `fueraDeRango` and `confirmadaPorLector` true. A normal value saves with no warning. The haptic is still missing. |
 | <a id="b-14"></a>B-14 | Close the route without pretending everything is synced. | RF-05, RF-22, [P-08](./07-open-questions.md#p-08), [P-09](./07-open-questions.md#p-09) | With supplies still pending, the close says how many and lets the reader close. With anything still unsent, the close is blocked, says how many readings and incidents are missing, and offers to retry the upload. |
+| <a id="b-15"></a>B-15 | Map, magnetometer arrow, and a coordinate saved with the reading. GPS only when it is needed. | RF-24, RF-25, RF-26, RF-27, [P-21](./07-open-questions.md#p-21) | Done. The map shows the route's supplies and the reader while that tab is focused. Selecting a supply shows distance and an arrow. Saving a reading stores one GPS fix (or `null`). GPS does not run when the reading screen opens. |
 
 B-14 needs the upload of B-13 to be useful on a real phone. With mocks, the unsent count comes from the mock.
 

@@ -19,6 +19,27 @@
             }
           }
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "La app necesita la cámara para escanear el código QR del medidor.",
+          "barcodeScannerEnabled": true,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "La app usa tu ubicación en el mapa para señalar el medidor y registrar desde dónde se cargó la lectura. No es supervisión del lector."
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true,
+          "faceIDPermission": "Allow $(PRODUCT_NAME) to access your Face ID biometric data."
+        }
       ]
     ],
     "name": "lecture-agua",

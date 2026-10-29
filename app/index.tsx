@@ -10,10 +10,10 @@ import { Button } from '@/components/Button'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { TextField } from '@/components/TextField'
 import { ThemedView } from '@/components/ThemedView'
-import { demoSignIn, signIn } from '@/services/login'
+import { useSignIn } from '@/hooks/use-sign-in'
+import { demoSignIn } from '@/services/login'
 import { colors } from '@/theme/colors'
 
-// P-13: the field is legajo, as in the prototype. The username contract stays open.
 const loginSchema = z.object({
   legajo: z.string().min(1, 'Ingresá el legajo'),
   password: z.string().min(1, 'Ingresá la contraseña'),
@@ -22,8 +22,8 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>
 
 export default function SignInScreen() {
-  const [authError, setAuthError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const { run, saving, error } = useSignIn()
+  const [biometricMessage, setBiometricMessage] = useState<string | null>(null)
   const demo = demoSignIn()
 
   const {
@@ -36,23 +36,10 @@ export default function SignInScreen() {
   })
 
   const onSignIn = async (values: LoginForm) => {
-    setAuthError(null)
-    setLoading(true)
-
-    try {
-      await signIn(values.legajo, values.password)
+    const session = await run(values.legajo, values.password)
+    if (session) {
       router.replace('/rutas')
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo ingresar'
-      setAuthError(message)
-    } finally {
-      setLoading(false)
     }
-  }
-
-  const onFingerprint = () => {
-    // P-14: fingerprint sign-in is left for class. This only reports that it is missing.
-    setAuthError('El ingreso con huella todavía no está disponible')
   }
 
   return (
@@ -86,16 +73,16 @@ export default function SignInScreen() {
         </Text>
       ) : null}
 
-      {authError ? <Text style={styles.error}>{authError}</Text> : null}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {biometricMessage ? <Text style={styles.error}>{biometricMessage}</Text> : null}
 
       <Button label="Ingresar" onPress={handleSubmit(onSignIn)} />
-      <LoadingOverlay visible={loading} label="Ingresando" />
+      <LoadingOverlay visible={saving} label="Ingresando" />
 
-      {/* P-14: does not read a fingerprint. */}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Entrar con huella"
-        onPress={onFingerprint}
+        onPress={() => setBiometricMessage('El ingreso con huella todavía no está disponible')}
         style={styles.biometric}
       >
         <View style={styles.biometricIcon}>
